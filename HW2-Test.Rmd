@@ -265,5 +265,42 @@ fig$x$frames <- lapply(
 
 
 
+# from sarah: 
+
+```{r}
+library(tidyverse)
+library(plotly)
+library(crosstalk)
+library(lubridate)
+
+# her method takes forever so I'm going to use mine to read in and separate the data
+move_fri <- read_csv("hw02-data/Movement Data/park-movement-Fri.csv")
+
+# split data up into desired columns 
+move_fri[c("Date", "Time")] <- stringr::str_split_fixed(move_fri$Timestamp, " ", 2)
+move_fri[c("Year", "Month", "Day")] <- stringr::str_split_fixed(move_fri$Date, "-", 3)
+move_fri[c("Hour", "Minute", "Second")] <- stringr::str_split_fixed(move_fri$Time, ":", 3)
+
+# drop unnecessary columns
+move_fri <- move_fri |> 
+  select(-c(Timestamp, Date, Time, Year, Second))
+# so now we have a data frame for friday data that is just the id, coordinates, and date time broken down easily manipulate cols
+
+# create the final df: 
+pop_fri <- move_fri |> 
+  group_by(Day, Hour, Minute, X, Y) |> 
+  summarize(grid_pop = length(id)) |> 
+  ungroup() |> 
+  group_by(Hour, Minute) |> 
+  mutate(total_pop = sum(grid_pop),
+         datetime = paste(Hour, Minute, sep = ":")) |> 
+  ungroup()
+
+# create df filtered to only include on the hour and half hour marks
+pop_fri_shared <- pop_fri |> 
+  filter(grepl(":00$", datetime) | grepl(":30$", datetime))
+```
+
+
 
 

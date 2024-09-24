@@ -120,7 +120,6 @@ move_fri_min <- move_fri |>
   filter(sec == "00") |>
   filter(min == "00" | min == "30") |>
   mutate(time = as.numeric(paste0(hour,".", min)))
-  filter(min == "00" & sec == "00")
 
 g <- ggplot() +
   scale_y_continuous(breaks = seq(from = 0, to = 100, by = 5),limits = c(-1,101)) +
@@ -135,7 +134,7 @@ g <- ggplot() +
 ggplotly(g)
 
 
-ggplotly(ggplot(move_fri_min, aes(x = X, y = Y, frame = time)) + geom_bin2d(bins = 50))
+ggplotly(ggplot(move_fri_min, aes(x = X, y = Y, frame = time)) + geom_bin2d(bins = 200))
 
 alp = 0
 ```
@@ -157,7 +156,7 @@ ggplotly(
     geom_rect(mapping = aes(xmin = 55.5, xmax = 70.5, ymin = 52, ymax = 100), fill = "NA", color = "yellow") +
     geom_polygon(data = kiddie_poly, mapping = aes(x = x, y = y), fill = "NA", color = "green") +
     geom_point(joint_rides, mapping = aes(as.numeric(X), as.numeric(Y))) +
-    geom_bin2d(data = move_fri_min, mapping = aes(x = X, y = Y, frame = time), bins = 6) +
+    geom_bin2d(data = move_fri_min, mapping = aes(x = X, y = Y, frame = time), bins = 200) +
     scale_fill_viridis_c()
   )
 ```

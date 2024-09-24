@@ -1,0 +1,197 @@
+---
+title: "communication visualizations"
+format: pdf
+---
+```{r}
+comm_data_Fri <- read.csv("hw02-data/Communication Data/comm-data-Fri.csv")
+comm_data_Sat <- read.csv("hw02-data/Communication Data/comm-data-Sat.csv")
+comm_data_Sun <- read.csv("hw02-data/Communication Data/comm-data-Sun.csv")
+```
+
+```{r}
+library(ggplot2)
+```
+
+```{r}
+fri_locations <- ggplot(data = comm_data_Fri, aes(x= location)) + geom_bar() +
+  scale_y_continuous(limits = c(0, 800000))
+```
+
+```{r}
+sat_locations <- ggplot(data = comm_data_Sat, aes(x= location)) + geom_bar() +
+  scale_y_continuous(limits = c(0, 800000))
+```
+
+```{r}
+sun_locations <- ggplot(data = comm_data_Sun, aes(x= location)) + geom_bar()+
+  scale_y_continuous(limits = c(0, 800000))
+```
+
+```{r}
+library(patchwork)
+fri_locations + sat_locations + sun_locations
+```
+
+
+```{r}
+library(dplyr)
+# group by pairs of people sending messages, and count how many messages were send in each pair (one direction- this means "A send to B" and "B send to A" are considered 2 pairs)
+comm_fir <- comm_data_Fri |>
+  group_by(from, to)|>
+  summarize(n = n()) |>
+  arrange(desc(n))
+
+comm_sat <- comm_data_Sat |>
+  group_by(from, to)|>
+  summarize(n = n()) |>
+  arrange(desc(n))
+
+comm_sun <- comm_data_Sun |>
+  group_by(from, to)|>
+  summarize(n = n()) |>
+  arrange(desc(n))
+
+
+# try to see if id 1278894 appeared on Sunday
+# check1278894 <- comm_sun |> filter(from == 1278894 | to == 1278894)
+```
+observation: id 1278894 appears all three days, the max text messages they send to/receive from each individual is 60 everyday, weird!
+
+```{r}
+# Convert Timestamp in all datasets to POSIXct (date-time format)
+comm_data_Fri$Timestamp <- as.POSIXct(comm_data_Fri$Timestamp, format = "%Y-%m-%d %H:%M:%S")
+
+comm_data_Sat$Timestamp <- as.POSIXct(comm_data_Sat$Timestamp, format = "%Y-%m-%d %H:%M:%S")
+
+comm_data_Sun$Timestamp <- as.POSIXct(comm_data_Sun$Timestamp, format = "%Y-%m-%d %H:%M:%S")
+```
+
+# Friday time series plot
+```{r}
+library(lubridate)
+
+# create the dataset for the time series plot, count number of messages by every minutes
+data_separated_fri <- comm_data_Fri |>
+  mutate(
+    DateTime = floor_date(Timestamp, "minute"),  # Date and time up to minute
+    Seconds = second(Timestamp)                    # Extract seconds
+  ) |>
+  group_by(DateTime, location) |>
+  summarize(n = n())
+
+ggplot(data_separated_fri, aes(x = DateTime, y = n, color = location)) +
+  geom_line() +  
+  labs(title = "Number of Messages Send on Friday (Per Minute)",
+       x = "Time",
+       y = "Number of Messages", 
+       color = "Location") +
+  theme_minimal()
+```
+
+# this one looks better: seperate by every 5 minutes
+```{r}
+# create the dataset for the time series plot, count number of messages by every 5 minutes
+data_separated_by5min_fri <- comm_data_Fri |> 
+  mutate( 
+    DateTime = floor_date(Timestamp, "5 minutes"),  # Group by 5-minute intervals
+    Seconds = second(Timestamp)                       # Extract seconds
+  ) |> 
+  group_by(DateTime, location) |> 
+  summarize(n = n(), .groups = "drop")  # Drop the grouping after summarizing
+
+# Plotting
+ggplot(data_separated_by5min_fri, aes(x = DateTime, y = n, color = location)) +
+  geom_line() +
+  labs(title = "Number of Messages Send on Friday (Every 5 Minutes)",
+       x = "Time",
+       y = "Number of Messages", 
+       color = "Location") +
+  theme_minimal()
+```
+
+# repeat the code above to create other two visualizations for saturday and sunday
+
+# Saturday time series plot
+```{r}
+# create the dataset for the time series plot, count number of messages by every minutes
+data_separated_sat <- comm_data_Sat |>
+  mutate(
+    DateTime = floor_date(Timestamp, "minute"),  # Date and time up to minute
+    Seconds = second(Timestamp)                    # Extract seconds
+  ) |>
+  group_by(DateTime, location) |>
+  summarize(n = n())
+
+ggplot(data_separated_sat, aes(x = DateTime, y = n, color = location)) +
+  geom_line() +  
+  labs(title = "Number of Messages Send on Saturday (Per Minute)",
+       x = "Time",
+       y = "Number of Messages", 
+       color = "Location") +
+  theme_minimal()
+```
+
+# this one looks better: seperate by every 5 minutes
+```{r}
+# create the dataset for the time series plot, count number of messages by every 5 minutes
+data_separated_by5min_sat <- comm_data_Sat |> 
+  mutate( 
+    DateTime = floor_date(Timestamp, "5 minutes"),  # Group by 5-minute intervals
+    Seconds = second(Timestamp)                       # Extract seconds
+  ) |> 
+  group_by(DateTime, location) |> 
+  summarize(n = n(), .groups = "drop")  # Drop the grouping after summarizing
+
+# Plotting
+ggplot(data_separated_by5min_sat, aes(x = DateTime, y = n, color = location)) +
+  geom_line() +
+  labs(title = "Number of Messages Send on Saturday (Every 5 Minutes)",
+       x = "Time",
+       y = "Number of Messages", 
+       color = "Location") +
+  theme_minimal()
+```
+
+# Sunday time series plot
+```{r}
+# create the dataset for the time series plot, count number of messages by every minutes
+data_separated_sun <- comm_data_Sun |>
+  mutate(
+    DateTime = floor_date(Timestamp, "minute"),  # Date and time up to minute
+    Seconds = second(Timestamp)                    # Extract seconds
+  ) |>
+  group_by(DateTime, location) |>
+  summarize(n = n())
+
+ggplot(data_separated_sun, aes(x = DateTime, y = n, color = location)) +
+  geom_line() +  
+  labs(title = "Number of Messages Send on Sunday (Per Minute)",
+       x = "Time",
+       y = "Number of Messages", 
+       color = "Location") +
+  theme_minimal()
+```
+
+# this one looks better: seperate by every 5 minutes
+```{r}
+# create the dataset for the time series plot, count number of messages by every 5 minutes
+data_separated_by5min_sun <- comm_data_Sun |> 
+  mutate( 
+    DateTime = floor_date(Timestamp, "5 minutes"),  # Group by 5-minute intervals
+    Seconds = second(Timestamp)                       # Extract seconds
+  ) |> 
+  group_by(DateTime, location) |> 
+  summarize(n = n(), .groups = "drop")  # Drop the grouping after summarizing
+
+# Plotting
+ggplot(data_separated_by5min_sun, aes(x = DateTime, y = n, color = location)) +
+  geom_line() +
+  labs(title = "Number of Messages Send on Sunday (Every 5 Minutes)",
+       x = "Time",
+       y = "Number of Messages", 
+       color = "Location") +
+  theme_minimal()
+```
+
+
+

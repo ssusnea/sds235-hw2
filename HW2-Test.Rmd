@@ -1,0 +1,269 @@
+---
+title: "HW2-Test"
+output: html_document
+date: "2024-09-22"
+---
+
+```{r}
+library(tidyverse)
+
+move_fri <- read_csv("~/Documents/RStudio/SDS 235/SDS235-HW2/hw02-data/Movement Data/park-movement-Fri.csv") |>
+  separate("Timestamp", into=c("date", "time"), sep = " ") |>
+  separate("date", into=c("year", "month", "day"), sep = "-") |>
+  separate("time", into=c("hour", "min", "sec"), sep = ":")
+
+move_sat <- read_csv("~/Documents/RStudio/SDS 235/SDS235-HW2/hw02-data/Movement Data/park-movement-Sat.csv") |>
+  separate("Timestamp", into=c("date", "time"), sep = " ") |>
+  separate("date", into=c("year", "month", "day"), sep = "-") |>
+  separate("time", into=c("hour", "min", "sec"), sep = ":")
+
+
+
+move_sun <- read_csv("~/Documents/RStudio/SDS 235/SDS235-HW2/hw02-data/Movement Data/park-movement-Sun.csv") |>
+  filter(id != "id") |>
+  separate("Timestamp", into=c("date", "time"), sep = " ") |>
+  separate("date", into=c("year", "month", "day"), sep = "-") |>
+  separate("time", into=c("hour", "min", "sec"), sep = ":")
+
+comm_fri <- read_csv("~/Documents/RStudio/SDS 235/SDS235-HW2/hw02-data/Communication Data/comm-data-Fri.csv")|>
+  separate("Timestamp", into=c("date", "time"), sep = " ") |>
+  separate("date", into=c("year", "month", "day"), sep = "-") |>
+  separate("time", into=c("hour", "min", "sec"), sep = ":")
+
+comm_sat <- read_csv("~/Documents/RStudio/SDS 235/SDS235-HW2/hw02-data/Communication Data/comm-data-Sat.csv")|>
+  separate("Timestamp", into=c("date", "time"), sep = " ") |>
+  separate("date", into=c("year", "month", "day"), sep = "-") |>
+  separate("time", into=c("hour", "min", "sec"), sep = ":")
+comm_sun <- read_csv("~/Documents/RStudio/SDS 235/SDS235-HW2/hw02-data/Communication Data/comm-data-Sun.csv")|>
+  separate("Timestamp", into=c("date", "time"), sep = " ") |>
+  separate("date", into=c("year", "month", "day"), sep = "-") |>
+  separate("time", into=c("hour", "min", "sec"), sep = ":")
+
+
+move_sun$id <- as.numeric(move_sun$id)
+```
+
+
+
+
+
+Joining to figure out main rides
+```{r}
+joint_fri <- move_fri |>
+  filter(type == "check-in") |>
+  inner_join(comm_fri, by = c("id" = "from", "day" = "day", "hour" = "hour", "min" = "min", "sec" = "sec")) |>
+  distinct(X, Y, location)
+
+joint_sat <- move_sat |>
+  filter(type == "check-in") |>
+  inner_join(comm_sat, by = c("id" = "from", "day" = "day", "hour" = "hour", "min" = "min", "sec" = "sec")) |>
+  distinct(X, Y, location)
+
+
+joint_sun <- move_sun |>
+  filter(type == "check-in") |>
+  inner_join(comm_sun, by = c("id" = "from", "day" = "day", "hour" = "hour", "min" = "min", "sec" = "sec")) |>
+  distinct(X, Y, location)
+
+
+joint_rides <- rbind(joint_fri,joint_sat,joint_sun) |>
+  distinct(X, Y, location)
+```
+
+
+```{r}
+library(ggplot2)
+library(jpeg)
+map_image <- readJPEG("~/Documents/RStudio/SDS 235/SDS235-HW2/hw02-data/Auxiliary Files/Park Map.jpg")
+map_grid <- grid::rasterGrob(map_image, width=unit(1,"npc"), height=unit(1,"npc"))
+
+
+#with map behind, doesn't align perfectly
+ggplot(joint_rides, aes(as.numeric(X), as.numeric(Y), color = location))+ 
+  annotation_custom(map_grid) +
+  geom_point(size = 5) +
+  scale_y_continuous(limits = c(5,95)) +
+  scale_x_continuous(limits = c(5,95))
+
+map <- ggplot(joint_rides, aes(as.numeric(X), as.numeric(Y), color = location))+ 
+  geom_point(size = 1) +
+  scale_y_continuous(breaks = seq(from = 0, to = 100, by = 5),limits = c(-1,101)) +
+  scale_x_continuous(breaks = seq(from = 0, to = 100, by = 5),limits = c(-1,101))
+```
+
+
+```{r}
+kiddie_poly <- data.frame(
+  x = c(71, 83, 83, 101,101, 71),
+  y = c(52, 52, 31, 31, 101, 101)
+)
+
+alp <- 0.15
+
+ggplot() +
+  scale_y_continuous(breaks = seq(from = 0, to = 100, by = 5),limits = c(-1,101)) +
+  scale_x_continuous(breaks = seq(from = 0, to = 100, by = 5),limits = c(-1,101)) +
+  geom_rect(mapping = aes(xmin = -1, xmax = 101, ymin = 0, ymax = 30.5), fill = "red", alpha = alp, color = "red") +
+  geom_rect(mapping = aes(xmin = -1, xmax = 82.5, ymin = 31, ymax = 51.5), fill = "deeppink", alpha = alp, color = "deeppink") +
+  geom_rect(mapping = aes(xmin = -1, xmax = 55, ymin = 52, ymax = 101), fill = "blue", alpha = alp, color = "blue") +
+  geom_rect(mapping = aes(xmin = 55.5, xmax = 70.5, ymin = 52, ymax = 101), fill = "yellow", alpha = alp, color = "yellow") +
+  geom_polygon(data = kiddie_poly, mapping = aes(x = x, y = y), fill = "green", alpha = alp, color = "green") +
+  geom_point(joint_rides, mapping = aes(as.numeric(X), as.numeric(Y), color = location), size = 1)
+```
+
+
+
+```{r}
+library(ggplot2)
+library(plotly)
+move_fri_min <- move_fri |>
+  filter(sec == "00") |>
+  filter(min == "00" | min == "30") |>
+  mutate(time = as.numeric(paste0(hour,".", min)))
+  filter(min == "00" & sec == "00")
+
+g <- ggplot() +
+  scale_y_continuous(breaks = seq(from = 0, to = 100, by = 5),limits = c(-1,101)) +
+  scale_x_continuous(breaks = seq(from = 0, to = 100, by = 5),limits = c(-1,101)) +
+  geom_rect(mapping = aes(xmin = -1, xmax = 101, ymin = 0, ymax = 30.5), fill = "red", alpha = alp, color = "red") +
+  geom_rect(mapping = aes(xmin = -1, xmax = 82.5, ymin = 31, ymax = 51.5), fill = "deeppink", alpha = alp, color = "deeppink") +
+  geom_rect(mapping = aes(xmin = -1, xmax = 55, ymin = 52, ymax = 101), fill = "blue", alpha = alp, color = "blue") +
+  geom_rect(mapping = aes(xmin = 55.5, xmax = 70.5, ymin = 52, ymax = 101), fill = "yellow", alpha = alp, color = "yellow") +
+  geom_polygon(data = kiddie_poly, mapping = aes(x = x, y = y), fill = "green", alpha = alp, color = "green") +
+  geom_point(move_fri_min, mapping = aes(as.numeric(X), as.numeric(Y), color = id, frame = hour), size = 1)
+
+ggplotly(g)
+
+
+ggplotly(ggplot(move_fri_min, aes(x = X, y = Y, frame = time)) + geom_bin2d(bins = 50))
+
+alp = 0
+```
+
+
+
+```{r}
+kiddie_poly <- data.frame(
+  x = c(71, 83, 83, 100,100, 71),
+  y = c(52, 52, 31, 31, 100, 100)
+)
+ggplotly(
+  ggplot() + 
+    scale_y_continuous(breaks = seq(from = 0, to = 100, by = 5),limits = c(0,100)) +
+    scale_x_continuous(breaks = seq(from = 0, to = 100, by = 5),limits = c(0,100)) +
+    geom_rect(mapping = aes(xmin = 0, xmax = 100, ymin = 0, ymax = 30.5), fill = "NA", color = "red") +
+    geom_rect(mapping = aes(xmin = 0, xmax = 82.5, ymin = 31, ymax = 51.5), fill = "NA", color = "deeppink") +
+    geom_rect(mapping = aes(xmin = 0, xmax = 55, ymin = 52, ymax = 100), fill = "NA", color = "blue") +
+    geom_rect(mapping = aes(xmin = 55.5, xmax = 70.5, ymin = 52, ymax = 100), fill = "NA", color = "yellow") +
+    geom_polygon(data = kiddie_poly, mapping = aes(x = x, y = y), fill = "NA", color = "green") +
+    geom_point(joint_rides, mapping = aes(as.numeric(X), as.numeric(Y))) +
+    geom_bin2d(data = move_fri_min, mapping = aes(x = X, y = Y, frame = time), bins = 6) +
+    scale_fill_viridis_c()
+  )
+```
+
+
+
+
+```{r}
+ggplotly()
+
+
+fig <- ggplotly(g)  |>
+  plotly_build()
+
+fig <- fig |>
+  style(traces = 5,
+        mode = "none",
+        hoverinfo = "none")
+
+fig <- fig |>
+  animation_opts(frame = 500, transition = 499, redraw = FALSE) |>
+  animation_button(visible = T) |>
+  animation_slider(
+    currentvalue = list(prefix = "Decade: "))
+fig
+```
+
+
+
+```{r}
+
+basin_sf <- st_as_sf(basin_data_complete, wkt = "geometry")
+
+st_crs(basin_sf) <- 4326
+
+
+
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+
+world <- world |>
+  filter(admin != "Antarctica") |>
+  st_transform(crs = "+proj=merc")
+
+
+g<-ggplot() +
+  geom_sf(data = basin_sf, aes(fill = Count, frame = Years), color = "black", size = 1, alpha = 1) +
+  geom_sf(data = world, alpha = 0.5) +
+  scale_fill_gradientn(colors = brewer.pal(9, "Purples"), limits = c(0,10), breaks = c(0, 2, 4 ,6, 8, 10)) + # Apply RColorBrewer gradient palette
+  labs(title = 'Number of Hurricanes by Decade <br> <sup> Sorted by oceanic basin </sup>', 
+       subtitle = "Sorted by oceanic basin",
+       fill = "Number of Hurricanes",
+       caption = "*Includes observations up to May 2024, with the decade ongoing")
+
+
+
+fixer <- function(gp) {
+  lapply(1:length(gp$x$data), \(m) {
+    gp$x$data[[m]]$hoveron <<- "fills"               # hover on the fill, not line
+    if(length(gp$x$data[[m]]$text > 1)) {
+      gp$x$data[[m]]$text <<- gp$x$data[[m]]$text[1] # only one tooltip per county
+    }
+  })
+  gp
+}
+
+
+
+names(basin_sf)[names(basin_sf) == "Count"] <- "Count"
+
+fig <- ggplotly(g, tooltip = c("name", "Count", "Years"))  |>
+  fixer() |>
+  layout(mapbox = list(
+    # zoom = -7,
+    # center = list(lat = 35.8, lon = -78.65)
+    xaxis = list(visible = TRUE, range = c(-130, 130)),  # Specify x-axis range
+    yaxis = list(visible = TRUE, range = c(-60,80))    # Specify y-axis range
+  ),
+  annotations = 
+    list(x = 1, y = -0.26, text = "*Includes observations up to May 2024, with the decade ongoing", 
+      showarrow = F, xref='paper', yref='paper', 
+      xanchor='right', yanchor='auto', xshift=0, yshift=0,
+      font=list(size=8, color="lightgrey"))) |>
+  plotly_build()
+
+
+fig <- fig |>
+  style(traces = 5,
+        mode = "none",
+        hoverinfo = "none")
+
+fig <- fig |>
+  animation_opts(frame = 500, transition = 499, redraw = FALSE) |>
+  animation_button(visible = T) |>
+  animation_slider(
+    currentvalue = list(prefix = "Decade: "))
+
+
+fig$x$frames <- lapply(
+  fig$x$frames, function(f) { 
+    f$data <- lapply(f$data, function(d) d[!names(d) %in% c("x", "y")])
+    f 
+  })
+```
+
+
+
+
+

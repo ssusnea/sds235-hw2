@@ -4,37 +4,38 @@ output: html_document
 date: "2024-09-22"
 ---
 
+THIS IS JUST A TEST DOCUMENT, DO NOT USE CODE FROM HERE 
 ```{r}
 library(tidyverse)
 
-move_fri <- read_csv("~/Documents/RStudio/SDS 235/SDS235-HW2/hw02-data/Movement Data/park-movement-Fri.csv") |>
+move_fri <- read_csv("hw02-data/Movement Data/park-movement-Fri.csv") |>
   separate("Timestamp", into=c("date", "time"), sep = " ") |>
   separate("date", into=c("year", "month", "day"), sep = "-") |>
   separate("time", into=c("hour", "min", "sec"), sep = ":")
 
-move_sat <- read_csv("~/Documents/RStudio/SDS 235/SDS235-HW2/hw02-data/Movement Data/park-movement-Sat.csv") |>
+move_sat <- read_csv("hw02-data/Movement Data/park-movement-Sat.csv") |>
   separate("Timestamp", into=c("date", "time"), sep = " ") |>
   separate("date", into=c("year", "month", "day"), sep = "-") |>
   separate("time", into=c("hour", "min", "sec"), sep = ":")
 
 
 
-move_sun <- read_csv("~/Documents/RStudio/SDS 235/SDS235-HW2/hw02-data/Movement Data/park-movement-Sun.csv") |>
+move_sun <- read_csv("hw02-data/Movement Data/park-movement-Sun.csv") |>
   filter(id != "id") |>
   separate("Timestamp", into=c("date", "time"), sep = " ") |>
   separate("date", into=c("year", "month", "day"), sep = "-") |>
   separate("time", into=c("hour", "min", "sec"), sep = ":")
 
-comm_fri <- read_csv("~/Documents/RStudio/SDS 235/SDS235-HW2/hw02-data/Communication Data/comm-data-Fri.csv")|>
+comm_fri <- read_csv("hw02-data/Communication Data/comm-data-Fri.csv")|>
   separate("Timestamp", into=c("date", "time"), sep = " ") |>
   separate("date", into=c("year", "month", "day"), sep = "-") |>
   separate("time", into=c("hour", "min", "sec"), sep = ":")
 
-comm_sat <- read_csv("~/Documents/RStudio/SDS 235/SDS235-HW2/hw02-data/Communication Data/comm-data-Sat.csv")|>
+comm_sat <- read_csv("hw02-data/Communication Data/comm-data-Sat.csv")|>
   separate("Timestamp", into=c("date", "time"), sep = " ") |>
   separate("date", into=c("year", "month", "day"), sep = "-") |>
   separate("time", into=c("hour", "min", "sec"), sep = ":")
-comm_sun <- read_csv("~/Documents/RStudio/SDS 235/SDS235-HW2/hw02-data/Communication Data/comm-data-Sun.csv")|>
+comm_sun <- read_csv("hw02-data/Communication Data/comm-data-Sun.csv")|>
   separate("Timestamp", into=c("date", "time"), sep = " ") |>
   separate("date", into=c("year", "month", "day"), sep = "-") |>
   separate("time", into=c("hour", "min", "sec"), sep = ":")
@@ -74,7 +75,7 @@ joint_rides <- rbind(joint_fri,joint_sat,joint_sun) |>
 ```{r}
 library(ggplot2)
 library(jpeg)
-map_image <- readJPEG("~/Documents/RStudio/SDS 235/SDS235-HW2/hw02-data/Auxiliary Files/Park Map.jpg")
+map_image <- readJPEG("hw02-data/Auxiliary Files/Park Map.jpg")
 map_grid <- grid::rasterGrob(map_image, width=unit(1,"npc"), height=unit(1,"npc"))
 
 
@@ -241,20 +242,20 @@ move_sun <- move_sun |>
 
 # creates dataframe with total population by datetime
 total_pop_fri <- move_fri|>
-  group_by(Day, Hour, Minute) |> 
-  summarize(total_pop = length(id)) |> 
-  ungroup() |> 
-  group_by(Hour, Minute) |> 
+  group_by(Day, Hour, Minute) |>
+  summarize(total_pop = length(id)) |>
+  ungroup() |>
+  group_by(Hour, Minute) |>
   mutate(datetime = paste(Hour, Minute, sep = ":"),
          datetime = paste(Day, datetime, sep = ", ")) |>
   ungroup() |>
   filter(grepl(":00$", datetime) | grepl(":30$", datetime))
 
 total_pop_sat <- move_sat|>
-  group_by(Day, Hour, Minute) |> 
-  summarize(total_pop = length(id)) |> 
-  ungroup() |> 
-  group_by(Hour, Minute) |> 
+  group_by(Day, Hour, Minute) |>
+  summarize(total_pop = length(id)) |>
+  ungroup() |>
+  group_by(Hour, Minute) |>
   mutate(datetime = paste(Hour, Minute, sep = ":"),
          datetime = paste(Day, datetime, sep = ", ")) |>
   ungroup() |>
@@ -264,10 +265,10 @@ total_pop_sat <- move_sat|>
 
 
 total_pop_sun <- move_sun|>
-  group_by(Day, Hour, Minute) |> 
-  summarize(total_pop = length(id)) |> 
-  ungroup() |> 
-  group_by(Hour, Minute) |> 
+  group_by(Day, Hour, Minute) |>
+  summarize(total_pop = length(id)) |>
+  ungroup() |>
+  group_by(Hour, Minute) |>
   mutate(datetime = paste(Hour, Minute, sep = ":"),
          datetime = paste(Day, datetime, sep = ", ")) |>
   ungroup() |>
@@ -334,6 +335,18 @@ pop_fri_test$Y <- as.numeric(pop_fri_test$Y)
 
 pop_all_test <- cbind(pop_fri_test, pop_sat_test, pop_sun_test)
 
+ggplotly(
+  ggplot() + 
+    scale_y_continuous(breaks = seq(from = 0, to = 100, by = 5),limits = c(0,100)) +
+    scale_x_continuous(breaks = seq(from = 0, to = 100, by = 5),limits = c(0,100)) +
+    geom_rect(mapping = aes(xmin = 0, xmax = 100, ymin = 0, ymax = 30.5), fill = "NA", color = "red") +
+    geom_rect(mapping = aes(xmin = 0, xmax = 82.5, ymin = 31, ymax = 51.5), fill = "NA", color = "deeppink") +
+    geom_rect(mapping = aes(xmin = 0, xmax = 55, ymin = 52, ymax = 100), fill = "NA", color = "blue") +
+    geom_rect(mapping = aes(xmin = 55.5, xmax = 70.5, ymin = 52, ymax = 100), fill = "NA", color = "yellow") +
+    geom_polygon(data = kiddie_poly, mapping = aes(x = x, y = y), fill = "NA", color = "green") +
+    geom_bin2d(data = pop_all_test, mapping = aes(x = X, y = Y, frame = Hour)) +
+    scale_fill_viridis_c()
+  )
 
 ggplotly(
   ggplot() + 
@@ -435,7 +448,7 @@ ggplotly(
     #geom_point(joint_rides, mapping = aes(as.numeric(X), as.numeric(Y))) +
     geom_bin2d(data = pop_shared, mapping = aes(x = X, y = Y, frame = datetime), bins = 40) +
     scale_fill_viridis_c()
-  )
+)
 
 
 ```

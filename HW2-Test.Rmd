@@ -164,105 +164,6 @@ ggplotly(
 
 
 
-```{r}
-ggplotly()
-
-
-fig <- ggplotly(g)  |>
-  plotly_build()
-
-fig <- fig |>
-  style(traces = 5,
-        mode = "none",
-        hoverinfo = "none")
-
-fig <- fig |>
-  animation_opts(frame = 500, transition = 499, redraw = FALSE) |>
-  animation_button(visible = T) |>
-  animation_slider(
-    currentvalue = list(prefix = "Decade: "))
-fig
-```
-
-
-
-```{r}
-
-basin_sf <- st_as_sf(basin_data_complete, wkt = "geometry")
-
-st_crs(basin_sf) <- 4326
-
-
-
-world <- ne_countries(scale = "medium", returnclass = "sf")
-
-
-world <- world |>
-  filter(admin != "Antarctica") |>
-  st_transform(crs = "+proj=merc")
-
-
-g<-ggplot() +
-  geom_sf(data = basin_sf, aes(fill = Count, frame = Years), color = "black", size = 1, alpha = 1) +
-  geom_sf(data = world, alpha = 0.5) +
-  scale_fill_gradientn(colors = brewer.pal(9, "Purples"), limits = c(0,10), breaks = c(0, 2, 4 ,6, 8, 10)) + # Apply RColorBrewer gradient palette
-  labs(title = 'Number of Hurricanes by Decade <br> <sup> Sorted by oceanic basin </sup>', 
-       subtitle = "Sorted by oceanic basin",
-       fill = "Number of Hurricanes",
-       caption = "*Includes observations up to May 2024, with the decade ongoing")
-
-
-
-fixer <- function(gp) {
-  lapply(1:length(gp$x$data), \(m) {
-    gp$x$data[[m]]$hoveron <<- "fills"               # hover on the fill, not line
-    if(length(gp$x$data[[m]]$text > 1)) {
-      gp$x$data[[m]]$text <<- gp$x$data[[m]]$text[1] # only one tooltip per county
-    }
-  })
-  gp
-}
-
-
-
-names(basin_sf)[names(basin_sf) == "Count"] <- "Count"
-
-fig <- ggplotly(g, tooltip = c("name", "Count", "Years"))  |>
-  fixer() |>
-  layout(mapbox = list(
-    # zoom = -7,
-    # center = list(lat = 35.8, lon = -78.65)
-    xaxis = list(visible = TRUE, range = c(-130, 130)),  # Specify x-axis range
-    yaxis = list(visible = TRUE, range = c(-60,80))    # Specify y-axis range
-  ),
-  annotations = 
-    list(x = 1, y = -0.26, text = "*Includes observations up to May 2024, with the decade ongoing", 
-      showarrow = F, xref='paper', yref='paper', 
-      xanchor='right', yanchor='auto', xshift=0, yshift=0,
-      font=list(size=8, color="lightgrey"))) |>
-  plotly_build()
-
-
-fig <- fig |>
-  style(traces = 5,
-        mode = "none",
-        hoverinfo = "none")
-
-fig <- fig |>
-  animation_opts(frame = 500, transition = 499, redraw = FALSE) |>
-  animation_button(visible = T) |>
-  animation_slider(
-    currentvalue = list(prefix = "Decade: "))
-
-
-fig$x$frames <- lapply(
-  fig$x$frames, function(f) { 
-    f$data <- lapply(f$data, function(d) d[!names(d) %in% c("x", "y")])
-    f 
-  })
-```
-
-
 
 # from sarah: 
 
@@ -299,6 +200,262 @@ pop_fri <- move_fri |>
 pop_fri_shared <- pop_fri |> 
   filter(grepl(":00$", datetime) | grepl(":30$", datetime))
 ```
+
+
+#sian new below
+```{r}
+library(tidyverse)
+library(plotly)
+library(crosstalk)
+library(lubridate)
+# her method takes forever so I'm going to use mine to read in and separate the data
+move_fri <- read_csv("hw02-data/Movement Data/park-movement-Fri.csv")
+move_sat <- read_csv("hw02-data/Movement Data/park-movement-Sat.csv")
+move_sun <- read_csv("hw02-data/Movement Data/park-movement-Sun.csv")
+
+# split data up into desired columns 
+move_fri[c("Date", "Time")] <- stringr::str_split_fixed(move_fri$Timestamp, " ", 2)
+move_fri[c("Year", "Month", "Day")] <- stringr::str_split_fixed(move_fri$Date, "-", 3)
+move_fri[c("Hour", "Minute", "Second")] <- stringr::str_split_fixed(move_fri$Time, ":", 3)
+
+move_sat[c("Date", "Time")] <- stringr::str_split_fixed(move_sat$Timestamp, " ", 2)
+move_sat[c("Year", "Month", "Day")] <- stringr::str_split_fixed(move_sat$Date, "-", 3)
+move_sat[c("Hour", "Minute", "Second")] <- stringr::str_split_fixed(move_sat$Time, ":", 3)
+
+move_sun[c("Date", "Time")] <- stringr::str_split_fixed(move_sun$Timestamp, " ", 2)
+move_sun[c("Year", "Month", "Day")] <- stringr::str_split_fixed(move_sun$Date, "-", 3)
+move_sun[c("Hour", "Minute", "Second")] <- stringr::str_split_fixed(move_sun$Time, ":", 3)
+
+# drop unnecessary columns
+move_fri <- move_fri |> 
+  select(-c(Timestamp, Time, Year, Second))
+
+move_sat <- move_sat |> 
+  select(-c(Timestamp, Time, Year, Second))
+
+move_sun <- move_sun |> 
+  select(-c(Timestamp, Time, Year, Second))
+
+
+# so now we have a data frame for friday data that is just the id, coordinates, and date time broken down easily manipulate cols
+
+# creates dataframe with total population by datetime
+total_pop_fri <- move_fri|>
+  group_by(Day, Hour, Minute) |> 
+  summarize(total_pop = length(id)) |> 
+  ungroup() |> 
+  group_by(Hour, Minute) |> 
+  mutate(datetime = paste(Hour, Minute, sep = ":"),
+         datetime = paste(Day, datetime, sep = ", ")) |>
+  ungroup() |>
+  filter(grepl(":00$", datetime) | grepl(":30$", datetime))
+
+total_pop_sat <- move_sat|>
+  group_by(Day, Hour, Minute) |> 
+  summarize(total_pop = length(id)) |> 
+  ungroup() |> 
+  group_by(Hour, Minute) |> 
+  mutate(datetime = paste(Hour, Minute, sep = ":"),
+         datetime = paste(Day, datetime, sep = ", ")) |>
+  ungroup() |>
+  filter(grepl(":00$", datetime) | grepl(":30$", datetime))
+
+
+
+
+total_pop_sun <- move_sun|>
+  group_by(Day, Hour, Minute) |> 
+  summarize(total_pop = length(id)) |> 
+  ungroup() |> 
+  group_by(Hour, Minute) |> 
+  mutate(datetime = paste(Hour, Minute, sep = ":"),
+         datetime = paste(Day, datetime, sep = ", ")) |>
+  ungroup() |>
+  filter(grepl(":00$", datetime) | grepl(":30$", datetime))
+
+
+
+#creates dataframe with each id moving by time
+pop_fri <- move_fri |> 
+  group_by(Hour, Minute) |> 
+  mutate(datetime = paste(Hour, Minute, sep = ":"),
+         datetime = paste(Day, datetime, sep = ", ")) |>
+  ungroup() |>
+  filter(grepl(":00$", datetime) | grepl(":30$", datetime))
+
+pop_sat <- move_sat |> 
+  group_by(Hour, Minute) |> 
+  mutate(datetime = paste(Hour, Minute, sep = ":"),
+         datetime = paste(Day, datetime, sep = ", ")) |>
+  ungroup() |>
+  filter(grepl(":00$", datetime) | grepl(":30$", datetime))
+
+pop_sun <- move_sun |> 
+  group_by(Hour, Minute) |> 
+  mutate(datetime = paste(Hour, Minute, sep = ":"),
+         datetime = paste(Day, datetime, sep = ", ")) |>
+  ungroup() |>
+  filter(grepl(":00$", datetime) | grepl(":30$", datetime))
+
+# create df filtered to only include on the hour and half hour marks
+pop_fri_shared <- left_join(pop_fri, total_pop_fri, by = c("Day" = "Day", "Hour" = "Hour", "Minute" = "Minute", "datetime" = "datetime"))
+pop_sat_shared <- left_join(pop_sat, total_pop_sat, by = c("Day" = "Day", "Hour" = "Hour", "Minute" = "Minute", "datetime" = "datetime"))
+pop_sun_shared <- left_join(pop_sun, total_pop_sun, by = c("Day" = "Day", "Hour" = "Hour", "Minute" = "Minute", "datetime" = "datetime"))
+
+
+pop_shared <- rbind(pop_fri, pop_sat, pop_sun)
+
+pop_shared$X <- as.numeric(pop_shared$X)
+pop_shared$Y <- as.numeric(pop_shared$Y)
+```
+
+
+```{r}
+pop_fri_test <- move_fri |>
+  group_by(Day, Hour) |> 
+  mutate(datetime = paste(Day, Hour, sep = ", "))
+
+pop_sat_test <- move_sat |>
+  group_by(Day, Hour) |> 
+  mutate(datetime = paste(Day, Hour, sep = ", "))
+
+pop_sun_test <- move_sun |>
+  group_by(Day, Hour) |> 
+  mutate(datetime = paste(Day, Hour, sep = ", "))
+
+pop_sun_test$X <- as.numeric(pop_sun_test$X)
+pop_sun_test$Y <- as.numeric(pop_sun_test$Y)
+
+pop_sat_test$X <- as.numeric(pop_sat_test$X)
+pop_sat_test$Y <- as.numeric(pop_sat_test$Y)
+
+pop_fri_test$X <- as.numeric(pop_fri_test$X)
+pop_fri_test$Y <- as.numeric(pop_fri_test$Y)
+
+pop_all_test <- cbind(pop_fri_test, pop_sat_test, pop_sun_test)
+
+
+ggplotly(
+  ggplot() + 
+    scale_y_continuous(breaks = seq(from = 0, to = 100, by = 5),limits = c(0,100)) +
+    scale_x_continuous(breaks = seq(from = 0, to = 100, by = 5),limits = c(0,100)) +
+    geom_rect(mapping = aes(xmin = 0, xmax = 100, ymin = 0, ymax = 30.5), fill = "NA", color = "red") +
+    geom_rect(mapping = aes(xmin = 0, xmax = 82.5, ymin = 31, ymax = 51.5), fill = "NA", color = "deeppink") +
+    geom_rect(mapping = aes(xmin = 0, xmax = 55, ymin = 52, ymax = 100), fill = "NA", color = "blue") +
+    geom_rect(mapping = aes(xmin = 55.5, xmax = 70.5, ymin = 52, ymax = 100), fill = "NA", color = "yellow") +
+    geom_polygon(data = kiddie_poly, mapping = aes(x = x, y = y), fill = "NA", color = "green") +
+    geom_bin2d(data = pop_sun_test, mapping = aes(x = X, y = Y, frame = Hour)) +
+    scale_fill_viridis_c()
+  )
+```
+
+
+
+
+
+```{r}
+all_min_sun <- move_sun |> 
+  group_by(Hour, Minute) |> 
+  mutate(datetime = paste(Hour, Minute, sep = ":"),
+         datetime = paste(Day, datetime, sep = ", ")) |>
+  ungroup()
+
+all_min_sun$X <- as.numeric(all_min_sun$X)
+all_min_sun$Y <- as.numeric(all_min_sun$Y)
+
+
+
+
+ggplotly(
+  ggplot() + 
+    scale_y_continuous(breaks = seq(from = 0, to = 100, by = 5),limits = c(0,100)) +
+    scale_x_continuous(breaks = seq(from = 0, to = 100, by = 5),limits = c(0,100)) +
+    geom_rect(mapping = aes(xmin = 0, xmax = 100, ymin = 0, ymax = 30.5), fill = "NA", color = "red") +
+    geom_rect(mapping = aes(xmin = 0, xmax = 82.5, ymin = 31, ymax = 51.5), fill = "NA", color = "deeppink") +
+    geom_rect(mapping = aes(xmin = 0, xmax = 55, ymin = 52, ymax = 100), fill = "NA", color = "blue") +
+    geom_rect(mapping = aes(xmin = 55.5, xmax = 70.5, ymin = 52, ymax = 100), fill = "NA", color = "yellow") +
+    geom_polygon(data = kiddie_poly, mapping = aes(x = x, y = y), fill = "NA", color = "green") +
+    #geom_point(joint_rides, mapping = aes(as.numeric(X), as.numeric(Y))) +
+    geom_bin2d(data = all_min_sun, mapping = aes(x = X, y = Y, frame = datetime)) +
+    scale_fill_viridis_c()
+  )
+
+
+ggplotly(
+  ggplot() + 
+    scale_y_continuous(breaks = seq(from = 20, to = 40, by = 5),limits = c(20,40)) +
+    scale_x_continuous(breaks = seq(from = 30, to = 35, by = 5),limits = c(30,35)) +
+    geom_rect(mapping = aes(xmin = 30, xmax = 35, ymin = 20, ymax = 30.5), fill = "NA", color = "red") +
+    geom_rect(mapping = aes(xmin = 30, xmax = 35, ymin = 31, ymax = 40), fill = "NA", color = "deeppink") +
+    geom_point(joint_rides, mapping = aes(as.numeric(X), as.numeric(Y))) +
+    geom_bin2d(data = all_min_sun, mapping = aes(x = X, y = Y, frame = datetime), bins = 400) +
+    scale_fill_viridis_c()
+  )
+```
+
+
+
+
+
+
+```{r}
+kiddie_poly <- data.frame(
+  x = c(71, 83, 83, 100,100, 71),
+  y = c(52, 52, 31, 31, 100, 100)
+)
+
+
+
+ggplotly(
+  ggplot() + 
+    scale_y_continuous(breaks = seq(from = 0, to = 100, by = 5),limits = c(0,100)) +
+    scale_x_continuous(breaks = seq(from = 0, to = 100, by = 5),limits = c(0,100)) +
+    geom_rect(mapping = aes(xmin = 0, xmax = 100, ymin = 0, ymax = 30.5), fill = "NA", color = "red") +
+    geom_rect(mapping = aes(xmin = 0, xmax = 82.5, ymin = 31, ymax = 51.5), fill = "NA", color = "deeppink") +
+    geom_rect(mapping = aes(xmin = 0, xmax = 55, ymin = 52, ymax = 100), fill = "NA", color = "blue") +
+    geom_rect(mapping = aes(xmin = 55.5, xmax = 70.5, ymin = 52, ymax = 100), fill = "NA", color = "yellow") +
+    geom_polygon(data = kiddie_poly, mapping = aes(x = x, y = y), fill = "NA", color = "green") +
+    geom_point(joint_rides, mapping = aes(as.numeric(X), as.numeric(Y))) +
+    geom_bin2d(data = pop_shared, mapping = aes(x = X, y = Y, frame = datetime)) +
+    scale_fill_viridis_c() +
+    scale_fill
+  )
+
+
+
+ggplotly(
+  ggplot() + 
+    scale_y_continuous(breaks = seq(from = 0, to = 100, by = 5),limits = c(0,100)) +
+    scale_x_continuous(breaks = seq(from = 0, to = 100, by = 5),limits = c(0,100)) +
+    geom_rect(mapping = aes(xmin = 0, xmax = 100, ymin = 0, ymax = 30.5), fill = "NA", color = "red") +
+    geom_rect(mapping = aes(xmin = 0, xmax = 82.5, ymin = 31, ymax = 51.5), fill = "NA", color = "deeppink") +
+    geom_rect(mapping = aes(xmin = 0, xmax = 55, ymin = 52, ymax = 100), fill = "NA", color = "blue") +
+    geom_rect(mapping = aes(xmin = 55.5, xmax = 70.5, ymin = 52, ymax = 100), fill = "NA", color = "yellow") +
+    geom_polygon(data = kiddie_poly, mapping = aes(x = x, y = y), fill = "NA", color = "green") +
+    #geom_point(joint_rides, mapping = aes(as.numeric(X), as.numeric(Y))) +
+    geom_bin2d(data = pop_shared, mapping = aes(x = X, y = Y, frame = datetime), bins = 40) +
+    scale_fill_viridis_c()
+  )
+
+
+```
+
+```{r}
+
+ggplotly(
+  ggplot() + 
+    scale_y_continuous(breaks = seq(from = 5, to = 45, by = 5),limits = c(5,45)) +
+    scale_x_continuous(breaks = seq(from = 25, to = 45, by = 5),limits = c(25,45)) +
+    geom_rect(mapping = aes(xmin = 25, xmax = 45, ymin = 5, ymax = 30.5), fill = "NA", color = "red") +
+    geom_rect(mapping = aes(xmin = 25, xmax = 45, ymin = 31, ymax = 45), fill = "NA", color = "deeppink") +
+    geom_point(joint_rides, mapping = aes(as.numeric(X), as.numeric(Y))) +
+    geom_bin2d(data = pop_shared, mapping = aes(x = X, y = Y, frame = datetime), bins = 10) +
+    scale_fill_viridis_c()
+  )
+```
+
+
+
 
 
 

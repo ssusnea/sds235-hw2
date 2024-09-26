@@ -1,5 +1,5 @@
 ---
-title: "communication visualizations"
+title: "communication visualizations (preliminary)"
 format: pdf
 ---
 ```{r}
@@ -10,21 +10,34 @@ comm_data_Sun <- read.csv("hw02-data/Communication Data/comm-data-Sun.csv")
 
 ```{r}
 library(ggplot2)
+library(scales)
 ```
 
 ```{r}
 fri_locations <- ggplot(data = comm_data_Fri, aes(x= location)) + geom_bar() +
-  scale_y_continuous(limits = c(0, 800000))
+  scale_y_continuous(limits = c(0, 800000), labels = comma)+
+  coord_flip() +
+  labs(title = "Firday",
+       x = "Location",
+       y = "Number of Messages Sent")
 ```
 
 ```{r}
 sat_locations <- ggplot(data = comm_data_Sat, aes(x= location)) + geom_bar() +
-  scale_y_continuous(limits = c(0, 800000))
+  scale_y_continuous(limits = c(0, 800000), labels = comma)+
+  coord_flip()+
+  labs(title = "Saturday",
+       x = "Location",
+       y = "Number of Messages Sent")
 ```
 
 ```{r}
 sun_locations <- ggplot(data = comm_data_Sun, aes(x= location)) + geom_bar()+
-  scale_y_continuous(limits = c(0, 800000))
+  scale_y_continuous(limits = c(0, 800000), labels = comma)+
+  coord_flip()+
+  labs(title = "Sunday",
+       x = "Location",
+       y = "Number of Messages Sent")
 ```
 
 ```{r}
@@ -85,7 +98,8 @@ ggplot(data_separated_fri, aes(x = DateTime, y = n, color = location)) +
        x = "Time",
        y = "Number of Messages", 
        color = "Location") +
-  theme_minimal()
+  theme_minimal() +
+  scale_y_continuous(limits = c(0, 12000))
 ```
 
 # this one looks better: seperate by every 5 minutes
@@ -106,7 +120,8 @@ ggplot(data_separated_by5min_fri, aes(x = DateTime, y = n, color = location)) +
        x = "Time",
        y = "Number of Messages", 
        color = "Location") +
-  theme_minimal()
+  theme_minimal() +
+  scale_y_continuous(limits = c(0, 12000))
 ```
 
 # repeat the code above to create other two visualizations for saturday and sunday
@@ -128,7 +143,8 @@ ggplot(data_separated_sat, aes(x = DateTime, y = n, color = location)) +
        x = "Time",
        y = "Number of Messages", 
        color = "Location") +
-  theme_minimal()
+  theme_minimal() +
+  scale_y_continuous(limits = c(0, 12000))
 ```
 
 # this one looks better: seperate by every 5 minutes
@@ -149,7 +165,8 @@ ggplot(data_separated_by5min_sat, aes(x = DateTime, y = n, color = location)) +
        x = "Time",
        y = "Number of Messages", 
        color = "Location") +
-  theme_minimal()
+  theme_minimal()+
+  scale_y_continuous(limits = c(0, 12000))
 ```
 
 # Sunday time series plot
@@ -169,7 +186,8 @@ ggplot(data_separated_sun, aes(x = DateTime, y = n, color = location)) +
        x = "Time",
        y = "Number of Messages", 
        color = "Location") +
-  theme_minimal()
+  theme_minimal()+
+  scale_y_continuous(limits = c(0, 12000))
 ```
 
 # this one looks better: seperate by every 5 minutes
@@ -190,8 +208,12 @@ ggplot(data_separated_by5min_sun, aes(x = DateTime, y = n, color = location)) +
        x = "Time",
        y = "Number of Messages", 
        color = "Location") +
-  theme_minimal()
+  theme_minimal()+
+  scale_y_continuous(limits = c(0, 12000))
 ```
+
+
+
 
 
 

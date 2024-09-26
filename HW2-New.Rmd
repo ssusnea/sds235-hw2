@@ -1,0 +1,122 @@
+---
+title: "HW2-Test2"
+output: html_document
+---
+
+```{r, echo = FALSE}
+library(tidyverse)
+library(plotly)
+library(crosstalk)
+library(lubridate)
+
+move_fri <- read_csv("hw02-data/Movement Data/park-movement-Fri.csv")
+move_sat <- read_csv("hw02-data/Movement Data/park-movement-Sat.csv")
+move_sun <- read_csv("hw02-data/Movement Data/park-movement-Sun.csv")
+
+# split data up into desired columns 
+move_fri[c("Date", "Time")] <- stringr::str_split_fixed(move_fri$Timestamp, " ", 2)
+move_fri[c("Year", "Month", "Day")] <- stringr::str_split_fixed(move_fri$Date, "-", 3)
+move_fri[c("Hour", "Minute", "Second")] <- stringr::str_split_fixed(move_fri$Time, ":", 3)
+
+move_sat[c("Date", "Time")] <- stringr::str_split_fixed(move_sat$Timestamp, " ", 2)
+move_sat[c("Year", "Month", "Day")] <- stringr::str_split_fixed(move_sat$Date, "-", 3)
+move_sat[c("Hour", "Minute", "Second")] <- stringr::str_split_fixed(move_sat$Time, ":", 3)
+
+move_sun[c("Date", "Time")] <- stringr::str_split_fixed(move_sun$Timestamp, " ", 2)
+move_sun[c("Year", "Month", "Day")] <- stringr::str_split_fixed(move_sun$Date, "-", 3)
+move_sun[c("Hour", "Minute", "Second")] <- stringr::str_split_fixed(move_sun$Time, ":", 3)
+
+# drop unnecessary columns
+move_fri <- move_fri |> 
+  select(-c(Timestamp, Time, Year, Second))
+
+move_sat <- move_sat |> 
+  select(-c(Timestamp, Time, Year, Second))
+
+move_sun <- move_sun |> 
+  select(-c(Timestamp, Time, Year, Second))
+
+
+#modifying to numeric vars
+move_fri$X <- as.numeric(move_fri$X)
+move_fri$Y <- as.numeric(move_fri$Y)
+
+move_sat$X <- as.numeric(move_sat$X)
+move_sat$Y <- as.numeric(move_sat$Y)
+ 
+move_sun$X <- as.numeric(move_sun$X)
+move_sun$Y <- as.numeric(move_sun$Y) 
+```
+
+
+
+```{r, echo = FALSE}
+#population movement by day
+pop_fri <- move_fri |>
+  group_by(Day, Hour) |> 
+  mutate(datetime = paste0("Fri, ", Hour, ":00")) |>
+  ungroup() |>
+  select(id, X, Y, datetime)
+
+pop_sat <- move_sat |>
+  group_by(Day, Hour) |> 
+  mutate(datetime = paste0("Sat, ", Hour, ":00")) |>
+  ungroup() |>
+  select(id, X, Y, datetime)
+
+pop_sun <- move_sun |>
+  group_by(Day, Hour) |> 
+  mutate(datetime = paste0("Sun, ", Hour, ":00")) |>
+  ungroup() |>
+  select(id, X, Y, datetime)
+
+pop_total <- rbind(pop_fri, pop_sat, pop_sun)
+```
+
+
+
+
+```{r, echo = FALSE}
+kiddie_poly <- data.frame(
+  x = c(71, 83, 83, 100,100, 71),
+  y = c(52, 52, 31, 31, 100, 100)
+)
+```
+
+```{r, echo = FALSE}
+#movement over time across whole park
+ggplotly(
+  ggplot() + 
+    scale_y_continuous(breaks = seq(from = 0, to = 100, by = 5),limits = c(0,100)) +
+    scale_x_continuous(breaks = seq(from = 0, to = 100, by = 5),limits = c(0,100)) +
+    geom_rect(mapping = aes(xmin = 0, xmax = 100, ymin = 0, ymax = 30.5), fill = "NA", color = "red") +
+    geom_rect(mapping = aes(xmin = 0, xmax = 82.5, ymin = 31, ymax = 51.5), fill = "NA", color = "deeppink") +
+    geom_rect(mapping = aes(xmin = 0, xmax = 55, ymin = 52, ymax = 100), fill = "NA", color = "blue") +
+    geom_rect(mapping = aes(xmin = 55.5, xmax = 70.5, ymin = 52, ymax = 100), fill = "NA", color = "yellow") +
+    geom_polygon(data = kiddie_poly, mapping = aes(x = x, y = y), fill = "NA", color = "green") +
+    geom_bin2d(data = pop_total, mapping = aes(x = X, y = Y, frame = datetime)) +
+    scale_fill_viridis_c() +
+    labs(fill = "People Count")
+  )
+```
+
+
+
+```{r}
+#movement over time across section of park near auditorium
+ggplotly(
+  ggplot() + 
+    scale_y_continuous(breaks = seq(from = 5, to = 45, by = 5),limits = c(5,45)) +
+    scale_x_continuous(breaks = seq(from = 15, to = 55, by = 5),limits = c(15,55)) +
+    geom_rect(mapping = aes(xmin = 15, xmax = 55, ymin = 5, ymax = 30.5), fill = "NA", color = "red") +
+    geom_rect(mapping = aes(xmin = 15, xmax = 55, ymin = 31, ymax = 45), fill = "NA", color = "deeppink") +
+    geom_bin2d(data = pop_total, mapping = aes(x = X, y = Y, frame = datetime), bins = 6) +
+    scale_fill_viridis_c() +
+    labs(fill = "People Count")
+  )
+```
+
+
+
+
+

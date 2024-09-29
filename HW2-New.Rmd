@@ -135,7 +135,7 @@ fig3
 
 
 ```{r}
-# small wrangling for df
+# small wrangling for df for lineplot
 pop_shared2 <- pop_total |> 
   filter(grepl("^Sun", datetime) & datetime != "Sun, :00") |> 
   group_by(datetime) |> 
@@ -148,7 +148,7 @@ pop_shared2 <- SharedData$new(pop_shared2, group = "shareddata", key = ~datetime
 ```
 
 ```{r}
-# small wrangling for df
+# small wrangling for df for the heatmap
 pop_shared3 <- pop_total |> 
   filter(grepl("^Sun", datetime) & datetime != "Sun, :00") |> 
   group_by(datetime, X, Y) |> 
@@ -159,8 +159,6 @@ pop_shared3 <- pop_total |>
 # creating the shared data frame
 pop_shared3 <- SharedData$new(pop_shared3, group = "shareddata", key = ~datetime)
 ```
-
-
 
 
 ```{r}
@@ -194,6 +192,3 @@ subplot(
 
 ```
 
-## where this is at right now: 
-the two show up in the same frame, but clicking on one point doesn't dynamically update the heatmap??? 
-I think this has something to do with keys from shareddata but not quite sure yet. yes! 

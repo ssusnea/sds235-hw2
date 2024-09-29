@@ -27,17 +27,17 @@ move_sun[c("Year", "Month", "Day")] <- stringr::str_split_fixed(move_sun$Date, "
 move_sun[c("Hour", "Minute", "Second")] <- stringr::str_split_fixed(move_sun$Time, ":", 3)
 
 # drop unnecessary columns
-move_fri <- move_fri |> 
+move_fri <- move_fri |>
   select(-c(Timestamp, Time, Year, Second))
 
-move_sat <- move_sat |> 
+move_sat <- move_sat |>
   select(-c(Timestamp, Time, Year, Second))
 
 move_sun <- move_sun |> 
   select(-c(Timestamp, Time, Year, Second))
 
 
-#modifying to numeric vars
+# modifying to numeric vars
 move_fri$X <- as.numeric(move_fri$X)
 move_fri$Y <- as.numeric(move_fri$Y)
 
@@ -53,13 +53,13 @@ move_sun$Y <- as.numeric(move_sun$Y)
 ```{r, echo = FALSE}
 #population movement by day
 pop_fri <- move_fri |>
-  group_by(Day, Hour) |> 
+  group_by(Day, Hour) |>
   mutate(datetime = paste0("Fri, ", Hour, ":00")) |>
   ungroup() |>
   select(id, X, Y, datetime)
 
 pop_sat <- move_sat |>
-  group_by(Day, Hour) |> 
+  group_by(Day, Hour) |>
   mutate(datetime = paste0("Sat, ", Hour, ":00")) |>
   ungroup() |>
   select(id, X, Y, datetime)
@@ -74,13 +74,50 @@ pop_total <- rbind(pop_fri, pop_sat, pop_sun)
 ```
 
 ```{r}
-# creating the shared data: 
-## filtering to only be sunday
-pop_shared1 <- pop_total |> 
-  filter(grepl("^Sun", datetime) & datetime != "Sun, :00") |> 
-  # filter(datetime != "Sun, :00" & datetime == starts_with("Sun")) |> 
+# creating df for zoomed in heatmap: 
+
+pop_heat <- pop_sun |> 
+  filter(datetime != "Sun, :00") |> 
   group_by(datetime, X, Y) |> 
   distinct(id) |> 
+  ungroup()
+
+## this doesn't need to be shared data because it's its own thing
+
+
+# creating shared data for lineplot 
+pop_shared1 <- pop_sun |> 
+  # filter(grepl("^Sun", datetime) & datetime != "Sun, :00") |> 
+  filter(datetime != "Sun, :00") |> 
+  group_by(datetime) |> 
+  distinct(id) |> 
+  summarize(total = length(id)) |> 
+  ungroup()
+
+# creating the shared data frame
+pop_shared1 <- SharedData$new(pop_shared1, group = "shareddata", key = ~datetime)
+
+# creating shared data for heatmap 
+pop_shared2 <- pop_sun |> 
+  filter(datetime != "Sun, :00") |> 
+  group_by(datetime, X, Y) |> 
+  distinct(id) |> 
+  summarize(total = length(id)) |> 
+  ungroup()
+
+# creating the shared data frame
+pop_shared2 <- SharedData$new(pop_shared2, group = "shareddata", key = ~datetime)
+```
+
+
+```{r}
+# creating the shared data: 
+## filtering to only be sunday
+pop_shared1 <- pop_total |>
+  filter(grepl("^Sun", datetime) & datetime != "Sun, :00") |>
+  # filter(datetime != "Sun, :00" & datetime == starts_with("Sun")) |>
+  group_by(datetime, X, Y) |>
+  distinct(id) |>
   ungroup()
 
 pop_shared1 <- SharedData$new(pop_shared1, group = "shareddata", key = ~datetime)
@@ -96,9 +133,9 @@ kiddie_poly <- data.frame(
 ```
 
 ```{r, echo = FALSE}
-#movement over time across whole park
+## movement over time across whole park
 fig2 <- ggplotly(
-  ggplot() + 
+  ggplot() +
     scale_y_continuous(breaks = seq(from = 0, to = 100, by = 5),limits = c(0,100)) +
     scale_x_continuous(breaks = seq(from = 0, to = 100, by = 5),limits = c(0,100)) +
     geom_rect(mapping = aes(xmin = 0, xmax = 100, ymin = 0, ymax = 30.5), fill = "NA", color = "red") +
@@ -106,89 +143,52 @@ fig2 <- ggplotly(
     geom_rect(mapping = aes(xmin = 0, xmax = 55, ymin = 52, ymax = 100), fill = "NA", color = "blue") +
     geom_rect(mapping = aes(xmin = 55.5, xmax = 70.5, ymin = 52, ymax = 100), fill = "NA", color = "yellow") +
     geom_polygon(data = kiddie_poly, mapping = aes(x = x, y = y), fill = "NA", color = "green") +
-    geom_bin2d(data = pop_shared1, mapping = aes(x = X, y = Y)) +
+    geom_bin2d(data = pop_shared1, mapping = aes(x = X, y = Y, frame = datetime)) +
     scale_fill_viridis_c() +
     labs(fill = "People Count")
   )
 
-
-# , frame = datetime this goes into geom_bin2d
 ```
 
 
 
 ```{r}
 #movement over time across section of park near auditorium
-fig3 <- # ggplotly(
+fig3 <- ggplotly(
   ggplot() + 
     scale_y_continuous(breaks = seq(from = 5, to = 45, by = 5),limits = c(5,45)) +
     scale_x_continuous(breaks = seq(from = 15, to = 55, by = 5),limits = c(15,55)) +
     geom_rect(mapping = aes(xmin = 15, xmax = 55, ymin = 5, ymax = 30.5), fill = "NA", color = "red") +
     geom_rect(mapping = aes(xmin = 15, xmax = 55, ymin = 31, ymax = 45), fill = "NA", color = "deeppink") +
-    geom_bin2d(data = pop_shared1, mapping = aes(x = X, y = Y), bins = 6) +
+    geom_bin2d(data = pop_heat, mapping = aes(x = X, y = Y, frame = datetime), bins = 6) +
     scale_fill_viridis_c() +
     labs(fill = "People Count")
- # )
+ )
 
 fig3
-```
 
-
-```{r}
-# small wrangling for df for lineplot
-pop_shared2 <- pop_total |> 
-  filter(grepl("^Sun", datetime) & datetime != "Sun, :00") |> 
-  group_by(datetime) |> 
-  distinct(id) |> 
-  summarize(total = length(id)) |> 
-  ungroup()
-
-# creating the shared data frame
-pop_shared2 <- SharedData$new(pop_shared2, group = "shareddata", key = ~datetime)
-```
-
-```{r}
-# small wrangling for df for the heatmap
-pop_shared3 <- pop_total |> 
-  filter(grepl("^Sun", datetime) & datetime != "Sun, :00") |> 
-  group_by(datetime, X, Y) |> 
-  distinct(id) |> 
-  summarize(total = length(id)) |> 
-  ungroup()
-
-# creating the shared data frame
-pop_shared3 <- SharedData$new(pop_shared3, group = "shareddata", key = ~datetime)
 ```
 
 
 ```{r}
 # creating the plotly line plot
 
-fig1 <- highlight(plot_ly(data = pop_shared2, x = ~datetime, y = ~total, type = "scatter", mode = "lines+markers"), on = "plotly_click", color = "red", off = 'plotly_doubleclick')
+fig1 <- highlight(plot_ly(data = pop_shared1, x = ~datetime, y = ~total, type = "scatter", mode = "lines+markers"), on = "plotly_click", color = "red", off = 'plotly_doubleclick')
 
 fig1
 
 
 # creating plotly heatmap: 
 
-fig4 <- plot_ly(data = pop_shared3, x = ~X, y = ~Y, z = ~total, type = "heatmap")
+fig2 <- plot_ly(data = pop_shared2, x = ~X, y = ~Y, z = ~total, type = "heatmap", hoverinfo = "x+y+z")
+
+fig2
 ```
 
-## I THINK THIS FIGURED IT OUT???
 ```{r}
+# plot together: 
 subplot(
-  fig1, fig4
+  fig1, fig2
 )
-```
-
-
-```{r}
-# link the two plots together: 
-
-subplot(
-  fig1, fig3
-)
-
-
 ```
 

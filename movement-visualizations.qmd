@@ -1,0 +1,115 @@
+---
+title: "Movement Vis"
+format: html
+---
+
+```{r, echo = F}
+library(tidyverse)
+library(plotly)
+library(crosstalk)
+library(lubridate)
+
+move_sun <- read_csv("hw02-data/Movement Data/park-movement-Sun.csv")
+
+move_sun[c("Date", "Time")] <- stringr::str_split_fixed(move_sun$Timestamp, " ", 2)
+move_sun[c("Year", "Month", "Day")] <- stringr::str_split_fixed(move_sun$Date, "-", 3)
+move_sun[c("Hour", "Minute", "Second")] <- stringr::str_split_fixed(move_sun$Time, ":", 3)
+
+# drop columns
+move_sun <- move_sun |> 
+  select(-c(Timestamp, Time, Year, Second))
+
+# coerce to numeric
+move_sun$X <- as.numeric(move_sun$X)
+move_sun$Y <- as.numeric(move_sun$Y) 
+
+# manipulate once more for 
+pop_sun <- move_sun |>
+  group_by(Day, Hour) |> 
+  mutate(datetime = paste0("Sun, ", Hour, ":00")) |>
+  ungroup() |>
+  select(id, X, Y, datetime)
+```
+
+```{r}
+# creating df for zoomed in heatmap: 
+
+pop_heat <- pop_sun |> 
+  filter(datetime != "Sun, :00") |> 
+  group_by(datetime, X, Y) |> 
+  distinct(id) |> 
+  ungroup()
+
+# creating shared data for lineplot 
+pop_shared1 <- pop_sun |> 
+  # filter(grepl("^Sun", datetime) & datetime != "Sun, :00") |> 
+  filter(datetime != "Sun, :00") |> 
+  group_by(datetime) |> 
+  distinct(id) |> 
+  summarize(total = length(id)) |> 
+  ungroup()
+
+pop_shared1 <- SharedData$new(pop_shared1, group = "shareddata", key = ~datetime)
+
+# creating shared data for heatmap 
+pop_shared2 <- pop_sun |> 
+  filter(datetime != "Sun, :00") |> 
+  group_by(datetime, X, Y) |> 
+  distinct(id) |> 
+  summarize(total = length(id)) |> 
+  ungroup()
+
+pop_shared2 <- SharedData$new(pop_shared2, group = "shareddata", key = ~datetime)
+```
+
+
+```{r, echo = FALSE}
+# create vector for park range outlines
+
+kiddie_poly <- data.frame(
+  x = c(71, 83, 83, 100,100, 71),
+  y = c(52, 52, 31, 31, 100, 100)
+)
+```
+
+
+```{r}
+#movement over time across section of park near auditorium
+fig3 <- ggplotly(
+  ggplot() + 
+    scale_y_continuous(breaks = seq(from = 5, to = 45, by = 5),limits = c(5,45)) +
+    scale_x_continuous(breaks = seq(from = 15, to = 55, by = 5),limits = c(15,55)) +
+    geom_rect(mapping = aes(xmin = 15, xmax = 55, ymin = 5, ymax = 30.5), fill = "NA", color = "red") +
+    geom_rect(mapping = aes(xmin = 15, xmax = 55, ymin = 31, ymax = 45), fill = "NA", color = "deeppink") +
+    geom_bin2d(data = pop_heat, mapping = aes(x = X, y = Y, frame = datetime), bins = 6) +
+    scale_fill_viridis_c() +
+    labs(fill = "People Count")
+ )
+
+fig3
+
+```
+
+
+```{r}
+# creating plotly maps: 
+
+# lineplot
+fig1 <- highlight(plot_ly(data = pop_shared1, x = ~datetime, y = ~total, type = "scatter", mode = "lines+markers"), on = "plotly_click", color = "red", off = 'plotly_doubleclick')
+
+fig1
+
+
+# heatmap 
+fig2 <- plot_ly(data = pop_shared2, x = ~X, y = ~Y, z = ~total, type = "heatmap", hoverinfo = "x+y+z")
+
+fig2
+```
+
+```{r}
+# plot together: 
+subplot(
+  fig1, fig2
+)
+```
+

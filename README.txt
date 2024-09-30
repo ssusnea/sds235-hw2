@@ -5,9 +5,10 @@ This .zip file contains 6 files:
 3. Sketches.pdf, a pdf file of our visualization sketches
 4. communication-analysis-interactive.ipynb, python code used to generate the interactive plot (communication data)
 5. movement-visualizations.qmd, R code used to generate the visualizations for the movement data
-6. Reflection.pdf, a pdf file with our reflection on the assignment
+6. Homework 2 Reflection.pdf, a pdf file with our reflection on the assignment
 7. interactive_movement1.mov, a short video demonstrating the interactivity of the visualization
 8. interactive_movement2.mov, a short video demonstrating the interactivity of the visualization
+9. Communication Data Interactive Plot Video.mov, a short video demonstrating the interactivity of the visualization
 
 Instructions:
 Please place all submitted files in the same directory as the hw02-data folder so that the codes can be run

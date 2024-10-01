@@ -143,7 +143,7 @@ fig2 <- ggplotly(
     geom_rect(mapping = aes(xmin = 0, xmax = 55, ymin = 52, ymax = 100), fill = "NA", color = "blue") +
     geom_rect(mapping = aes(xmin = 55.5, xmax = 70.5, ymin = 52, ymax = 100), fill = "NA", color = "yellow") +
     geom_polygon(data = kiddie_poly, mapping = aes(x = x, y = y), fill = "NA", color = "green") +
-    geom_bin2d(data = pop_shared1, mapping = aes(x = X, y = Y, frame = datetime)) +
+    geom_bin2d(data = pop_heat, mapping = aes(x = X, y = Y, frame = datetime)) +
     scale_fill_viridis_c() +
     labs(fill = "People Count")
   )

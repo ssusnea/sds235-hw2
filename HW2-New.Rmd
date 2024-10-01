@@ -113,14 +113,14 @@ pop_shared2 <- SharedData$new(pop_shared2, group = "shareddata", key = ~datetime
 ```{r}
 # creating the shared data: 
 ## filtering to only be sunday
-pop_shared1 <- pop_total |>
-  filter(grepl("^Sun", datetime) & datetime != "Sun, :00") |>
-  # filter(datetime != "Sun, :00" & datetime == starts_with("Sun")) |>
-  group_by(datetime, X, Y) |>
-  distinct(id) |>
-  ungroup()
-
-pop_shared1 <- SharedData$new(pop_shared1, group = "shareddata", key = ~datetime)
+# pop_shared1 <- pop_total |>
+#   filter(grepl("^Sun", datetime) & datetime != "Sun, :00") |>
+#   # filter(datetime != "Sun, :00" & datetime == starts_with("Sun")) |>
+#   group_by(datetime, X, Y) |>
+#   distinct(id) |>
+#   ungroup()
+# 
+# pop_shared1 <- SharedData$new(pop_shared1, group = "shareddata", key = ~datetime)
 ```
 
 
